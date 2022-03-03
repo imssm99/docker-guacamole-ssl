@@ -1,0 +1,79 @@
+version: "3.8"
+
+networks:
+  guacnet:
+    driver: bridge
+
+volumes:
+  guacdb:
+
+services:
+  nginx:
+    image: nginx
+    container_name: guacnginx
+    networks:
+    - guacnet
+    restart: always
+    volumes:
+    - ./data/nginx/templates:/etc/nginx/templates
+    - ./data/certbot/conf:/etc/letsencrypt
+    - ./data/certbot/www:/var/www/certbot
+    ports:
+    - 80:80
+    - 443:443
+    environment:
+    - SERVER_NAME=${GUAC_SERVER_NAME}
+
+  certbot:
+    image: certbot/certbot
+    container_name: guaccertbot
+    networks:
+    - guacnet
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${GUAC_EMAIL} --agree-tos --no-eff-email -d ${GUAC_SERVER_NAME}
+    volumes:
+    - ./data/certbot/conf:/etc/letsencrypt
+    - ./data/certbot/www:/var/www/certbot
+
+  guacamole:
+    depends_on:
+    - guacd
+    image: guacamole/guacamole
+    container_name: guacamole
+    networks:
+    - guacnet
+    restart: always
+    environment:
+      GUACD_HOSTNAME: guacd
+      MYSQL_HOSTNAME: mysql
+      MYSQL_ROOT_PASSWORD: guacamole
+      MYSQL_DATABASE: guacamole
+      MYSQL_USER: guacamole
+      MYSQL_PASSWORD: guacamole
+    ports:
+    - 8080:8080
+
+  guacd:
+    depends_on:
+    - mysql
+    image: guacamole/guacd
+    container_name: guacd
+    networks:
+    - guacnet
+    restart: always
+
+  mysql:
+    image: mysql
+    container_name: guacmysql
+    networks:
+    - guacnet
+    restart: always
+    volumes:
+    - guacdb:/var/lib/mysql
+    - ./data/init:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: guacamole
+      MYSQL_DATABASE: guacamole
+      MYSQL_USER: guacamole
+      MYSQL_PASSWORD: guacamole
+    cap_add:
+    - SYS_NICE
