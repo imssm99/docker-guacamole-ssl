@@ -8,32 +8,6 @@ volumes:
   guacdb:
 
 services:
-  nginx:
-    image: nginx
-    container_name: guacnginx
-    networks:
-    - guacnet
-    restart: always
-    volumes:
-    - ./data/nginx/templates:/etc/nginx/templates
-    - ./data/certbot/conf:/etc/letsencrypt
-    - ./data/certbot/www:/var/www/certbot
-    ports:
-    - 80:80
-    - 443:443
-    environment:
-    - SERVER_NAME=${GUAC_SERVER_NAME}
-
-  certbot:
-    image: certbot/certbot
-    container_name: guaccertbot
-    networks:
-    - guacnet
-    command: certonly --webroot --webroot-path=/var/www/certbot --email ${GUAC_EMAIL} --agree-tos --no-eff-email -d ${GUAC_SERVER_NAME}
-    volumes:
-    - ./data/certbot/conf:/etc/letsencrypt
-    - ./data/certbot/www:/var/www/certbot
-
   guacamole:
     depends_on:
     - guacd
